@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HSK 2 学习系统 - XUSFUNCHINESE</title>
+    <style>
+        :root {
+            --gold: #fbc02d;
+            --bg: radial-gradient(circle at center, #001f3f 0%, #000510 100%);
+            --glass: rgba(255, 255, 255, 0.1);
+        }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            font-family: "Arial Black", sans-serif;
+            background: var(--bg);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            overflow-x: hidden;
+        }
+
+        /* 动态背景星空 */
+        .stars {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; pointer-events: none;
+        }
+
+        .header {
+            text-align: center;
+            margin-top: 40px;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            font-size: 32px;
+            margin: 0;
+            color: var(--gold);
+            text-shadow: 0 0 15px rgba(251, 192, 45, 0.5);
+        }
+        .header p {
+            font-size: 14px;
+            opacity: 0.8;
+            letter-spacing: 2px;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            width: 90%;
+            max-width: 400px;
+            padding-bottom: 40px;
+        }
+
+        .menu-item {
+            background: var(--glass);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 15px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .menu-item:active {
+            transform: scale(0.95);
+            background: rgba(255,255,255,0.2);
+        }
+
+        .icon {
+            font-size: 40px;
+            margin-right: 20px;
+            width: 50px;
+            text-align: center;
+        }
+
+        .info h3 {
+            margin: 0;
+            font-size: 18px;
+            color: var(--gold);
+        }
+        .info p {
+            margin: 5px 0 0;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        .footer {
+            margin-top: auto;
+            padding: 20px;
+            font-size: 12px;
+            opacity: 0.5;
+        }
+
+        /* 针对横屏或平板的适配 */
+        @media (min-width: 600px) {
+            .menu-grid {
+                grid-template-columns: 1fr 1fr;
+                max-width: 700px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="stars" id="star-field"></div>
+
+    <div class="header">
+        <h1>HSK 2 MASTER</h1>
+        <p>全能学习系统</p>
+    </div>
+
+    <div class="menu-grid">
+        <a href="HSK2fulllistening.html" class="menu-item">
+            <div class="icon">🎧</div>
+            <div class="info">
+                <h3>听力大师</h3>
+                <p>100道听力四选一练习</p>
+            </div>
+        </a>
+
+        <a href="HSK2fullreading.html" class="menu-item">
+            <div class="icon">📖</div>
+            <div class="info">
+                <h3>阅读逻辑</h3>
+                <p>短文理解与语法点突破</p>
+            </div>
+        </a>
+
+        <a href="HSK2fullvocab.html" class="menu-item">
+            <div class="icon">🏮</div>
+            <div class="info">
+                <h3>核心词汇</h3>
+                <p>生词卡片与例句学习</p>
+            </div>
+        </a>
+
+        <a href="HSK2fullcon.html" class="menu-item">
+            <div class="icon">💬</div>
+            <div class="info">
+                <h3>情景对话</h3>
+                <p>实战场景语音模拟</p>
+            </div>
+        </a>
+
+        <a href="HSK2fullhanzi.html" class="menu-item">
+            <div class="icon">✍️</div>
+            <div class="info">
+                <h3>汉字书写</h3>
+                <p>笔顺练习与生词模式</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="footer">
+        © 2025 XUSFUNCHINESE - 开启汉语进阶之路
+    </div>
+
+    <script>
+        // 生成装饰性星星
+        function createStars() {
+            const field = document.getElementById('star-field');
+            for (let i = 0; i < 80; i++) {
+                const star = document.createElement('div');
+                const size = Math.random() * 2 + 'px';
+                star.style.position = 'absolute';
+                star.style.width = size;
+                star.style.height = size;
+                star.style.background = 'white';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.opacity = Math.random();
+                star.style.borderRadius = '50%';
+                field.appendChild(star);
+            }
+        }
+        createStars();
+    </script>
+</body>
+</html>
