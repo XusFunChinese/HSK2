@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HSK 2 READING MASTER V24</title>
+    <style>
+        :root {
+            --primary: #1a237e; --gold: #fbc02d; 
+            --night-sky: radial-gradient(circle at center, #001f3f 0%, #000510 100%);
+        }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; font-family: "Microsoft YaHei", sans-serif; overflow: hidden; background: var(--night-sky); color: white; }
+        
+        /* 拼音样式：适中大小，适配多端 */
+        ruby { ruby-align: center; display: inline-flex; flex-direction: column-reverse; vertical-align: bottom; align-items: center; margin: 0 1.5px; }
+        rt { display: block; font-family: Arial, sans-serif; font-size: 0.5em; color: var(--gold); line-height: 1.1; height: 1.1em; text-align: center; font-weight: bold; }
+
+        #cover-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--night-sky); z-index: 5000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .mode-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; width: 90%; max-width: 500px; }
+        .mode-btn { padding: 15px; background: rgba(255,255,255,0.1); border: 2px solid var(--gold); color: white; border-radius: 15px; cursor: pointer; font-size: 18px; }
+
+        #app { display: none; height: 100vh; flex-direction: column; padding: 10px; box-sizing: border-box; }
+        .nav-header { display: flex; justify-content: space-between; align-items: center; height: 50px; }
+        .progress-bar { flex-grow: 1; height: 10px; background: rgba(255,255,255,0.2); margin: 0 15px; border-radius: 5px; overflow: hidden; }
+        #progress-fill { height: 100%; width: 0%; background: var(--gold); transition: 0.3s; }
+
+        .content-card { flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; width: 100%; max-width: 800px; margin: 0 auto; overflow: hidden; }
+        .reading-text { font-size: clamp(20px, 5vw, 30px); line-height: 2.2; margin-bottom: 20px; width: 95%; }
+        .visual-box { font-size: clamp(80px, 15vw, 120px); margin-bottom: 15px; }
+
+        .option-container { display: grid; grid-template-columns: 1fr; gap: 12px; width: 90%; max-width: 500px; }
+        .opt-item { background: white; color: #001f3f; padding: 15px; border-radius: 15px; font-size: clamp(16px, 4vw, 22px); cursor: pointer; font-weight: bold; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+        
+        .nav-controls { display: flex; gap: 10px; width: 90%; max-width: 400px; margin-top: 20px; }
+        .ctrl-btn { flex: 1; padding: 12px; border-radius: 10px; border: 1px solid white; background: none; color: white; cursor: pointer; font-size: 16px; }
+
+        #feedback-pop { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 120px; display: none; z-index: 9999; pointer-events: none; }
+        .overlay-view { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 6000; display: none; padding: 20px; box-sizing: border-box; overflow-y: auto; }
+        .list-card { background: #111; padding: 15px; border-radius: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; border-left: 5px solid var(--gold); font-size: 18px; }
+    </style>
+</head>
+<body>
+
+<div id="cover-page">
+    <h2 style="color:var(--gold)">HSK 2 READING MASTER</h2>
+    <div class="mode-grid">
+        <button class="mode-btn" onclick="startApp(0)">PART 1 (1-20)</button>
+        <button class="mode-btn" onclick="startApp(20)">PART 2 (21-40)</button>
+        <button class="mode-btn" onclick="startApp(40)">PART 3 (41-60)</button>
+        <button class="mode-btn" onclick="startApp(60)">PART 4 (61-80)</button>
+        <button class="mode-btn" style="grid-column: span 2" onclick="startApp(80)">PART 5 (81-100)</button>
+    </div>
+    <button class="mode-btn" style="margin-top:20px; border-color:#ff4757; color:#ff4757; width:90%; max-width:500px" onclick="toggleOverlay('mistake-view', true)">📓 错题本 (MISTAKES)</button>
+</div>
+
+<div id="app">
+    <div class="nav-header">
+        <button class="ctrl-btn" style="flex:0; padding:5px 15px" onclick="location.reload()">🏠</button>
+        <div class="progress-bar"><div id="progress-fill"></div></div>
+        <button class="ctrl-btn" style="flex:0; padding:5px 15px" onclick="toggleOverlay('list-view', true)">📜</button>
+    </div>
+    <div class="content-card">
+        <div id="visual-area" class="visual-box"></div>
+        <div id="question-text" class="reading-text"></div>
+        <div id="options-grid" class="option-container"></div>
+        <div class="nav-controls">
+            <button class="ctrl-btn" onclick="prevQ()">上一题</button>
+            <button class="ctrl-btn" onclick="nextQ()">下一题</button>
+        </div>
+    </div>
+</div>
+
+<div id="list-view" class="overlay-view">
+    <h3 style="color:var(--gold)">题目列表 (1-100)</h3>
+    <div id="list-content"></div>
+    <button class="ctrl-btn" style="width:100%; margin-top:20px" onclick="toggleOverlay('list-view', false)">返回</button>
+</div>
+
+<div id="mistake-view" class="overlay-view">
+    <h3 style="color:#ff4757">我的错题</h3>
+    <div id="mistake-content"></div>
+    <button class="ctrl-btn" style="width:100%; margin-top:20px" onclick="toggleOverlay('mistake-view', false)">返回</button>
+</div>
+
+<div id="feedback-pop"></div>
+
+<script>
+const pyMap = {"您":"nín","它":"tā","大家":"dàjiā","每":"měi","为什么":"wèishénme","零":"líng","两":"liǎng","百":"bǎi","千":"qiān","第一":"dìyī","次":"cì","件":"jiàn","别":"bié","非常":"fēicháng","也":"yě","还":"hái","最":"zuì","真":"zhēn","正在":"zhèngzài","已经":"yǐjīng","一起":"yìqǐ","再":"zài","就":"jiù","因为":"yīnwèi","所以":"suǒyǐ","虽然":"suīrán","但是":"dànshì","不仅":"bùjǐn","而且":"érqiě","到":"dào","离":"lí","向":"xiàng","往":"wǎng","得":"de","了":"le","着":"zhe","过":"guò","一下":"yíxià","吧":"ba","意思":"yìsi","准备":"zhǔnbèi","开始":"kāishǐ","介绍":"jièshào","帮助":"bāngzhù","玩":"wán","送":"sòng","等":"děng","让":"ràng","起床":"qǐchuáng","唱歌":"chànggē","跳舞":"tiàowǔ","旅游":"lǚyóu","上班":"shàngbān","生病":"shēngbìng","休息":"xiūxi","运动":"yùndòng","游泳":"yóuyǒng","踢足球":"tīzúqiú","打篮球":"dǎlánqiú","完":"wán","觉得":"juéde","明白":"míngbai","告诉":"gàosu","服务员":"fúwùyuán","公司":"gōngsī","机场":"jīchǎng","火车站":"huǒchēzhàn","教室":"jiàoshì","时间":"shíjiān","报纸":"bàozhǐ","西瓜":"xīguā","鸡蛋":"jīdàn","羊肉":"yángròu","咖啡":"kāfēi","牛奶":"niúnǎi","药":"yào","自行车":"zìxíngchē","路":"lù","孩子":"háizi","丈夫":"zhàngfu","妻子":"qīzi","哥哥":"gēge","姐姐":"jiějie","弟弟":"dìdi","妹妹":"mèimei","医生":"yīshēng","身体":"shēntǐ","颜色":"yánsè","事情":"shìqing","公共汽车":"gōnggòngqìchē","漂亮":"piàoliang","便宜":"piányi","贵":"guì","新":"xīn","忙":"máng","累":"lèi","快":"kuài","慢":"màn","高兴":"gāoxìng","欢迎":"huānyíng","可能":"kěnéng","可以":"kěyǐ","希望":"xīwàng","去":"qù","买":"mǎi","想":"xiǎng","接":"jiē","出差":"chūchāi","冷":"lěng","热":"rè","雪":"xuě","雨":"yǔ","阴天":"yīntiān","字":"zì","懂":"dǒng","题":"tí","穿":"chuān","洗":"xǐ","找":"zhǎo","问":"wèn","读":"dú","写":"xiě","考试":"kǎoshì","看见":"kànjiàn","说话":"shuōhuà","睡觉":"shuìjiào","跑步":"pǎobù","礼物":"lǐwù","写字":"xiězì","练习":"liànxí","旁边":"pángbiān","超市":"chāoshì","努力":"nǔlì","成绩":"chéngjì","提高":"tígāo","刚才":"gāngcái","旧":"jiù","好用":"hǎoyòng","新鲜":"xīnxiān","建议":"jiànyì","小学":"xiǎoxué","方便":"fāngbiàn","水平":"shuǐpíng"};
+
+function toRuby(str) {
+    if(!str) return "";
+    let res = "";
+    let i = 0;
+    while(i < str.length) {
+        let match = false;
+        for(let l=3; l>=2; l--) {
+            let sub = str.substr(i, l);
+            if(pyMap[sub]) {
+                res += `<ruby>${sub}<rt>${pyMap[sub]}</rt></ruby>`;
+                i += l; match = true; break;
+            }
+        }
+        if(!match) {
+            let c = str[i];
+            if(c.match(/[\u4e00-\u9fa5]/)) res += `<ruby>${c}<rt>${pyMap[c]||' '}</rt></ruby>`;
+            else res += c;
+            i++;
+        }
+    }
+    return res;
+}
+
+// 题目设计：确保正误比例 1:1，选项分布均衡
+const questions = [
+    // PART 1 (1-20) - 10对10错
+    {id:0, type:1, text:"他正在教室里准备明天的考试。", visual:"📝", answer:true},
+    {id:1, type:1, text:"妹妹不仅爱唱歌，还爱跳舞。", visual:"💃", answer:true},
+    {id:2, type:1, text:"因为下雨了，所以他在家睡觉。", visual:"☀️", answer:false},
+    {id:3, type:1, text:"这辆自行车的颜色我不喜欢。", visual:"🚲", answer:true},
+    {id:4, type:1, text:"他生病了，正在医院看医生。", visual:"⚽", answer:false},
+    {id:5, type:1, text:"服务员，请再给我一杯热牛奶。", visual:"🥛", answer:true},
+    {id:6, type:1, text:"医生说要多吃西瓜，少喝咖啡。", visual:"🍉", answer:true},
+    {id:7, type:1, text:"大家正在火车站等公共汽车。", visual:"🚌", answer:false},
+    {id:8, type:1, text:"时间不早了，快起床去上班吧。", visual:"🛌", answer:false},
+    {id:9, type:1, text:"这里的羊肉非常便宜，也很好吃。", visual:"🍖", answer:true},
+    {id:10, type:1, text:"他打篮球打得非常好。", visual:"🏊", answer:false},
+    {id:11, type:1, text:"他在机场等了两个小时。", visual:"✈️", answer:true},
+    {id:12, type:1, text:"这个字的意思我不明白。", visual:"📖", answer:false},
+    {id:13, type:1, text:"爸爸在桌子上看报纸呢。", visual:"📰", answer:true},
+    {id:14, type:1, text:"外面下雪了，天气非常热。", visual:"❄️", answer:false},
+    {id:15, type:1, text:"这种药一天吃三次，一次两片。", visual:"💊", answer:true},
+    {id:16, type:1, text:"欢迎大家来我家里玩儿。", visual:"🏢", answer:false},
+    {id:17, type:1, text:"那个孩子是我的弟弟，很聪明。", visual:"👦", answer:true},
+    {id:18, type:1, text:"妈妈在厨房里煮鸡蛋呢。", visual:"🍳", answer:true},
+    {id:19, type:1, text:"公司离我家很近，要坐飞机去。", visual:"🚶", answer:false},
+
+    // PART 2 (21-40) - 选项打乱 (0:A, 1:B, 2:C, 3:D)
+    {id:20, type:2, text:"我想去北京旅游。", options:["🎒","🚗","🐱","🏫"], answer:0},
+    {id:21, type:2, text:"他在教室里写字。", options:["⚽","✍️","🍎","🚶"], answer:1},
+    {id:22, type:2, text:"你会踢足球吗？", options:["🏀","🏊","⚽","💃"], answer:2},
+    {id:23, type:2, text:"公共汽车站到了。", options:["🚌","✈️","🛤️","🚲"], answer:0},
+    {id:24, type:2, text:"请等我一下。", options:["🎁","⏳","⏰","📞"], answer:1},
+    {id:25, type:2, text:"这是送给你的礼物。", options:["🍉","☕","👗","🎁"], answer:3},
+    {id:26, type:2, text:"跑步很有意思。", options:["🏃","🛌","🍳","📺"], answer:0},
+    {id:27, type:2, text:"您找谁？我在接电话。", options:["📞","📰","🎨","🛒"], answer:0},
+    {id:28, type:2, text:"今天买了些鱼。", options:["🍖","🐟","🥛","🍳"], answer:1},
+    {id:29, type:2, text:"电影开始了。", options:["💻","📷","🎬","🎨"], answer:2},
+    {id:30, type:2, text:"多喝水对身体好。", options:["🥤","🍔","🍟","🍕"], answer:0},
+    {id:31, type:2, text:"苹果很甜。", options:["🍌","🍎","🍇","🍊"], answer:1},
+    {id:32, type:2, text:"去年他去过上海。", options:["💼","🎒","🕶️","🧢"], answer:0},
+    {id:33, type:2, text:"雨下得很大。", options:["☀️","☁️","🌧️","🌨️"], answer:2},
+    {id:34, type:2, text:"我的自行车丢了。", options:["🚲","🚗","🛵","🛴"], answer:0},
+    {id:35, type:2, text:"火车站在这儿。", options:["🏥","🛤️","🏨","🏫"], answer:1},
+    {id:36, type:2, text:"明年我想出国。", options:["🌍","🏠","🏞️","🏟️"], answer:0},
+    {id:37, type:2, text:"这是我的妻子。", options:["👨‍👩‍👧","👵","👫","👴"], answer:2},
+    {id:38, type:2, text:"不能用手机。", options:["📵","📶","📱","🔋"], answer:0},
+    {id:39, type:2, text:"牛奶在冰箱里。", options:["🥣","🥛","🧂","🍯"], answer:1},
+
+    // PART 3 (41-60) - 词汇选择
+    {id:40, type:3, text:"你会(  )打篮球吗？", options:["经常", "已经", "非常", "可能"], answer:0},
+    {id:41, type:3, text:"离考试还有十(  )。", options:["颜色", "分钟", "事情", "意思"], answer:1},
+    {id:42, type:3, text:"大家请(  )，老师来了。", options:["说话", "跳舞", "休息", "唱歌"], answer:0},
+    {id:43, type:3, text:"我(  )准备好了。", options:["已经", "但是", "因为", "所以"], answer:0},
+    {id:44, type:3, text:"这个字怎么(  )？", options:["穿", "写", "洗", "跳"], answer:1},
+    {id:45, type:3, text:"欢迎你来我们(  )工作。", options:["身体", "报纸", "公司", "西瓜"], answer:2},
+    {id:46, type:3, text:"她穿这件红色的衣服很(  )。", options:["漂亮", "便宜", "慢", "累"], answer:0},
+    {id:47, type:3, text:"公共汽车站就在超市(  )。", options:["以前", "旁边", "里边", "以后"], answer:1},
+    {id:48, type:3, text:"别(  )了，就在桌子上。", options:["问", "等", "找", "看"], answer:2},
+    {id:49, type:3, text:"你觉得(  )还是咖啡好喝？", options:["牛奶", "鸡蛋", "羊肉", "西瓜"], answer:0},
+    {id:50, type:3, text:"他在机场等了两个(  )。", options:["时间", "小时", "分钟", "去年"], answer:1},
+    {id:51, type:3, text:"这个(  )我不会做。", options:["字", "题", "路", "药"], answer:1},
+    {id:52, type:3, text:"你的(  )好点了吗？", options:["身体", "高兴", "事情", "颜色"], answer:0},
+    {id:53, type:3, text:"请(  )我怎么去火车站。", options:["介绍", "开始", "告诉", "帮助"], answer:2},
+    {id:54, type:3, text:"我们(  )去旅游吧。", options:["一起", "已经", "非常", "正在"], answer:0},
+    {id:55, type:3, text:"这是谁的自行车？(  )的。", options:["它", "您", "我", "谁"], answer:2},
+    {id:56, type:3, text:"今天天气(  )冷。", options:["真", "最", "也", "还"], answer:0},
+    {id:57, type:3, text:"别看电视了，快去(  )。", options:["游泳", "睡觉", "唱歌", "跳舞"], answer:1},
+    {id:58, type:3, text:"不仅我爱唱歌，我弟弟(  )爱唱歌。", options:["也", "就", "再", "还"], answer:0},
+    {id:59, type:3, text:"服务员，请问这(  )衣服多少钱？", options:["次", "百", "件", "千"], answer:2},
+
+    // PART 4 (61-80) - 对话配对
+    {id:60, type:4, text:"你要咖啡还是牛奶？", options:["我要咖啡。","在那儿。","我也去。","没关系。"], answer:0},
+    {id:61, type:4, text:"为什么没去上班？", options:["他在家。","因为我生病了。","很漂亮。","太贵了。"], answer:1},
+    {id:62, type:4, text:"去机场怎么走？", options:["坐公共汽车。","在桌子上。","一千块。","去旅游。"], answer:0},
+    {id:63, type:4, text:"你会打篮球吗？", options:["我不明白。","两点半。","不会，但我会足球。","那是谁？"], answer:2},
+    {id:64, type:4, text:"这衣服贵吗？", options:["不贵，很便宜。","很慢。","一百岁。","我想去。"], answer:0},
+    {id:65, type:4, text:"你是哪年出生的？", options:["一月一号。","二零零五年。","三点整。","去年。"], answer:1},
+    {id:66, type:4, text:"别找了，在这儿呢。", options:["谢谢你帮我。","没关系。","再见。","很高兴。"], answer:0},
+    {id:67, type:4, text:"大家准备好了吗？", options:["还没吃饭。","好了，可以开始了。","不去。","我不认识。"], answer:1},
+    {id:68, type:4, text:"离公司远不远？", options:["不远，走几分钟。","非常好。","两件。","没意思。"], answer:0},
+    {id:69, type:4, text:"事情办完了吗？", options:["谢谢您。","我喜欢。","办完了。","在前面。"], answer:2},
+    {id:70, type:4, text:"你要去哪儿？", options:["我去火车站。","我姓李。","我明白了。","再见。"], answer:0},
+    {id:71, type:4, text:"外面在下雨吗？", options:["很漂亮。","是的，真冷。","没时间。","一百块。"], answer:1},
+    {id:72, type:4, text:"你的汉语真好！", options:["谢谢，还在学习。","不客气。","他是谁。","在教室里。"], answer:0},
+    {id:73, type:4, text:"生日快乐！", options:["我也好。","谢谢！","再见。","对不起。"], answer:1},
+    {id:74, type:4, text:"现在几点了？", options:["两点十分。","三月一号。","五岁。","两件。"], answer:0},
+    {id:75, type:4, text:"你认识那个人吗？", options:["不认识路。","认识，他是医生。","他很高。","他是哪国人。"], answer:1},
+    {id:76, type:4, text:"欢迎来我家玩！", options:["好的，明天见。","没关系。","我不找他项。","很贵。"], answer:0},
+    {id:77, type:4, text:"您怎么了？", options:["我姓王。","我头有点疼。","我回来了。","我去公司。"], answer:1},
+    {id:78, type:4, text:"这个西瓜怎么卖？", options:["五块钱一斤。","很好吃。","很红。","在桌子上。"], answer:0},
+    {id:79, type:4, text:"这种药怎么吃？", options:["去药店买。","医生说的。","一天吃三次。","很苦。"], answer:2},
+
+    // PART 5 (81-100) - 短文理解
+    {id:80, type:5, text:"虽然王老师六十岁了，但他每天都跑步，身体非常好。", options:["他身体好", "他不运动", "很忙", "不教书"], answer:0},
+    {id:81, type:5, text:"我打算明天去机场接丈夫，他出差三天了，我很想他。", options:["接孩子", "接丈夫", "接老师", "接医生"], answer:1},
+    {id:82, type:5, text:"这件衣服虽然有点儿贵，但是颜色漂亮，穿上很舒服。", options:["衣服很便宜", "她不喜欢颜色", "衣服不舒服", "衣服有点儿贵"], answer:3},
+    {id:83, type:5, text:"因为下雨了，所以我们不去踢足球了，在家里看电视吧。", options:["去踢球", "看电视", "去学校", "去上班"], answer:1},
+    {id:84, type:5, text:"不仅我会说汉语，我的两个弟弟也会说，我们都很喜欢中国。", options:["只有我会说", "弟弟不会说", "三人都会说", "弟弟不喜欢中国"], answer:2},
+    {id:85, type:5, text:"公共汽车站就在公司前面，走过去只要两分钟，非常方便。", options:["离公司很远", "离公司很近", "坐车要半小时", "没有车站"], answer:1},
+    {id:86, type:5, text:"医生告诉他，这种药一天吃三次，而且要多休息。", options:["一天吃一次", "不用休息", "这种药很贵", "一天吃三次"], answer:3},
+    {id:87, type:5, text:"虽然他来公司的时间不长，但是工作非常努力，大家都很喜欢他。", options:["大家不喜欢他", "他工作不努力", "他刚来不久", "他想离开"], answer:2},
+    {id:88, type:5, text:"那个正在教室里唱歌的女孩子是我妹妹，她比我小三岁。", options:["她是我姐姐", "她在跳舞", "她是我妹妹", "她比我大"], answer:2},
+    {id:89, type:5, text:"昨天我买了一个新手机，比旧的好用多了，颜色也是我最喜欢的。", options:["新手机好用", "旧手机好用", "不喜欢颜色", "手机丢了"], answer:0},
+    {id:90, type:5, text:"今天天气不错，阴天，不冷也不热，非常适合去外面玩儿。", options:["天气很冷", "天气很热", "适合出去玩", "今天下雪"], answer:2},
+    {id:91, type:5, text:"大卫在北京住了三年了，所以他的汉语水平提高得非常快。", options:["他刚到北京", "他不会说汉语", "他在那儿三年了", "他想去北京"], answer:2},
+    {id:92, type:5, text:"请问，您知道去火车站的路怎么走吗？我第一次来这儿。", options:["他在找路", "他在买票", "他在等车", "他在上班"], answer:0},
+    {id:93, type:5, text:"我想再买一个西瓜，刚才那个太小了，大家都不够吃。", options:["西瓜很大", "西瓜很甜", "想再买一个", "不想吃了"], answer:2},
+    {id:94, type:5, text:"别找了，你的自行车在商店门口呢，我刚才看见了。", options:["自行车丢了", "在商店门口", "在家里", "他没看见"], answer:1},
+    {id:95, type:5, text:"介绍一下，这位是王经理，他不仅爱打篮球，也爱唱歌。", options:["王经理不爱运动", "他爱打篮球", "他不爱唱歌", "他不认识王经理"], answer:1},
+    {id:96, type:5, text:"虽然他生病了，但他还是坚持来参加这次非常重要的考试。", options:["他没来考试", "考试不重要", "他身体很好", "他生病了"], answer:3},
+    {id:97, type:5, text:"这种羊肉虽然便宜，但是非常不新鲜，我不建议你买。", options:["羊肉很贵", "羊肉很新鲜", "建议买", "不新鲜"], answer:3},
+    {id:98, type:5, text:"时间过得真快，一转眼我的孩子都上小学了。", options:["时间很慢", "孩子还没上学", "孩子上小学了", "他不爱孩子"], answer:2},
+    {id:99, type:5, text:"欢迎来到我们公司，请先在这里休息一下，喝杯热咖啡吧。", options:["请喝咖啡", "请去工作", "请去跑步", "请去睡觉"], answer:0}
+];
+
+let currentIdx = 0;
+let isMistakeMode = false;
+let mistakes = JSON.parse(localStorage.getItem('hsk2_v24_mistakes') || '[]');
+
+function startApp(idx) {
+    currentIdx = idx; isMistakeMode = false;
+    document.getElementById('cover-page').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    renderQuestion();
+}
+
+function renderQuestion() {
+    const q = isMistakeMode ? mistakes[currentIdx] : questions[currentIdx];
+    document.getElementById('progress-fill').style.width = `${((currentIdx%20)+1)/20*100}%`;
+    document.getElementById('question-text').innerHTML = toRuby(q.text);
+    const v = document.getElementById('visual-area');
+    v.innerText = (q.type <= 2) ? q.visual || "" : "";
+    v.style.display = (q.type <= 2) ? 'block' : 'none';
+
+    const g = document.getElementById('options-grid');
+    g.innerHTML = '';
+    if(q.type === 1) {
+        g.style.gridTemplateColumns = "1fr 1fr";
+        g.innerHTML = `<div class="opt-item" style="text-align:center" onclick="handleAns(true)">✔️ 对</div>
+                       <div class="opt-item" style="text-align:center" onclick="handleAns(false)">❌ 错</div>`;
+    } else {
+        g.style.gridTemplateColumns = "1fr";
+        q.options.forEach((o, i) => {
+            g.innerHTML += `<div class="opt-item" onclick="handleAns(${i})">${toRuby(o)}</div>`;
+        });
+    }
+}
+
+function handleAns(choice) {
+    const q = isMistakeMode ? mistakes[currentIdx] : questions[currentIdx];
+    const isCorrect = choice === q.answer;
+    const fb = document.getElementById('feedback-pop');
+    
+    fb.innerText = isCorrect ? "🌟" : "❌";
+    fb.style.display = 'block';
+
+    if(!isCorrect && !isMistakeMode) {
+        if(!mistakes.some(m => m.id === q.id)) mistakes.push(q);
+        localStorage.setItem('hsk2_v24_mistakes', JSON.stringify(mistakes));
+    }
+
+    setTimeout(() => {
+        fb.style.display = 'none';
+        if(isCorrect && isMistakeMode) {
+            mistakes.splice(currentIdx, 1);
+            localStorage.setItem('hsk2_v24_mistakes', JSON.stringify(mistakes));
+        }
+        if((currentIdx + 1) % 20 === 0 && !isMistakeMode) playEncouragement();
+        nextQ();
+    }, 600);
+}
+
+function playEncouragement() {
+    const msgs = ["太棒了，继续加油！", "做得好！你完成了一个部分！", "真厉害，你的汉语真不错！"];
+    const u = new SpeechSynthesisUtterance(msgs[Math.floor(Math.random()*msgs.length)]);
+    u.lang = 'zh-CN'; window.speechSynthesis.speak(u);
+}
+
+function nextQ() {
+    if(isMistakeMode) { if(mistakes.length) currentIdx = currentIdx % mistakes.length; }
+    else if(currentIdx < 99) currentIdx++;
+    renderQuestion();
+}
+
+function prevQ() {
+    if(isMistakeMode) { if(mistakes.length) currentIdx = (currentIdx - 1 + mistakes.length) % mistakes.length; }
+    else if(currentIdx > 0) currentIdx--;
+    renderQuestion();
+}
+
+function toggleOverlay(id, show) {
+    document.getElementById(id).style.display = show ? 'block' : 'none';
+    if(show && id === 'list-view') renderFullList();
+    if(show && id === 'mistake-view') renderMistakeList();
+}
+
+function renderFullList() {
+    const c = document.getElementById('list-content');
+    c.innerHTML = questions.map((q, i) => `
+        <div class="list-card" onclick="jumpTo(${i}, false)">
+            <span>${i+1}. ${q.text.slice(0,10)}...</span>
+            <span style="color:var(--gold)">前往</span>
+        </div>`).join('');
+}
+
+function renderMistakeList() {
+    const c = document.getElementById('mistake-content');
+    if(!mistakes.length) { c.innerHTML = "<p>太好了，没有错题！</p>"; return; }
+    c.innerHTML = mistakes.map((q, i) => `
+        <div class="list-card" onclick="jumpTo(${i}, true)">
+            <span>${q.text.slice(0,10)}...</span>
+            <span style="color:#ff4757">练习</span>
+        </div>`).join('');
+}
+
+function jumpTo(i, m) {
+    currentIdx = i; isMistakeMode = m;
+    toggleOverlay(m ? 'mistake-view' : 'list-view', false);
+    document.getElementById('cover-page').style.display = 'none';
+    document.getElementById('app').style.display = 'flex';
+    renderQuestion();
+}
+
+window.onload = () => { renderQuestion(); };
+</script>
+</body>
+</html>

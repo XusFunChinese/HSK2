@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, landscape=yes">
+    <title>HSK 1-2 Pro - XUSFUNCHINESE</title>
+    <style>
+        :root {
+            --primary: #01579b; 
+            --accent: #e1f5fe;  
+            --gold: #fbc02d;
+            --pinyin: #ff0000; /* 更醒目的拼音颜色 */
+            --night-sky: radial-gradient(circle at center, #001f3f 0%, #000510 100%);
+        }
+        
+        body { 
+            margin: 0; font-family: "Arial Black", "Segoe UI", Tahoma, sans-serif; 
+            background: linear-gradient(135deg, #0277bd 0%, #002f6c 100%); 
+            height: 100vh; display: flex; flex-direction: column; overflow: hidden; position: relative;
+        }
+
+        .watermark {
+            position: fixed; bottom: 10px; right: 20px; opacity: 0.3;
+            color: white; font-size: 14px; pointer-events: none; z-index: 1000;
+        }
+
+        /* Cover Page */
+        #cover-page {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--night-sky); z-index: 5000; display: flex;
+            flex-direction: column; justify-content: center; align-items: center;
+            cursor: pointer; transition: opacity 0.8s ease-out, visibility 0.8s; overflow: hidden;
+        }
+        .star {
+            position: absolute; top: 50%; left: 50%; width: 2px; height: 2px;
+            background: white; border-radius: 50%; animation: shoot linear infinite;
+        }
+        @keyframes shoot {
+            0% { transform: translate(-50%, -50%) rotate(var(--angle)) translateX(0); opacity: 1; }
+            100% { transform: translate(-50%, -50%) rotate(var(--angle)) translateX(1000px); opacity: 0; width: 160px; }
+        }
+
+        header { 
+            background: rgba(255,255,255,0.95); padding: 10px 20px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3); z-index: 100; 
+        }
+        .nav-btns button { 
+            padding: 8px 15px; margin-right: 8px; border-radius: 20px; border: 2px solid var(--primary); 
+            cursor: pointer; font-weight: bold; background: white; color: var(--primary);
+        }
+        .active-mode { background: var(--primary) !important; color: white !important; }
+        .mode-desc { font-size: 12px; color: #555; margin-left: 10px; font-weight: normal; }
+
+        main { flex: 1; display: flex; padding: 20px; gap: 15px; overflow: hidden; position: relative; }
+        #left-panel { flex: 0.8; background: rgba(255,255,255,0.95); border-radius: 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 4px solid var(--accent); }
+        #right-panel { flex: 1.2; background: rgba(255,255,255,0.95); border-radius: 30px; padding: 30px; display: flex; flex-direction: column; overflow-y: auto; border: 4px solid var(--accent); }
+
+        /* One-to-one Alignment */
+        ruby { ruby-align: center; font-size: 36px; margin: 0 4px; line-height: 2.5; font-weight: 600; }
+        rt { font-size: 18px; color: var(--pinyin); font-weight: bold; }
+        .eng-sub { display: block; font-size: 22px; color: #333; margin-top: 15px; border-top: 1px dashed #ccc; padding-top: 10px; }
+        
+        #emoji-display { font-size: 100px; margin-bottom: 20px; }
+        .option-btn { background: white; border: 2px solid var(--primary); padding: 15px; margin: 8px 0; border-radius: 12px; cursor: pointer; font-size: 18px; width: 100%; text-align: left; }
+        .option-btn:hover { background: var(--accent); }
+
+        /* Full Screen List Mode */
+        #list-mode-container { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 200; overflow-y: auto; padding: 40px; box-sizing: border-box; }
+        .list-row { border-bottom: 2px solid var(--accent); padding: 25px; display: flex; align-items: flex-start; gap: 20px; }
+        .list-row:hover { background: #fdfdfd; }
+        .list-close { position: fixed; top: 20px; right: 40px; background: red; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: bold; z-index: 300; }
+
+        .hidden { display: none !important; }
+        #timer-val { color: #d0021b; font-size: 24px; font-weight: bold; margin-right: 15px; }
+    </style>
+</head>
+<body>
+
+<div class="watermark">XUSFUNCHINESE</div>
+
+<div id="cover-page" onclick="enterApp()">
+    <div id="star-container"></div>
+    <div style="text-align: center; z-index: 10;">
+        <h1 style="font-size: 7vw; color: var(--gold); margin: 0;">HSK 1-2</h1>
+        <p style="font-size: 2vw; color: white;">150 Core Conversations</p>
+        <p style="color: white; letter-spacing: 5px; margin-top: 50px;">CLICK TO START</p>
+    </div>
+</div>
+
+<header>
+    <div class="nav-btns">
+        <button onclick="setMode('study')" id="btn-study">📖 Study</button>
+        <button onclick="setMode('quiz')" id="btn-quiz">❓ Quiz</button>
+        <button onclick="setMode('rush')" id="btn-rush">⚡ Rush</button>
+        <button onclick="setMode('list')" id="btn-list">📜 List</button>
+        <span id="mode-instr" class="mode-desc">Welcome! Pick a mode to start.</span>
+    </div>
+    <div style="display: flex; align-items: center;">
+        <span id="timer-val" class="hidden">30s</span>
+        <span style="font-weight: bold;">Score: <span id="score-display">0</span></span>
+    </div>
+</header>
+
+<main>
+    <div id="main-content" style="display: flex; width: 100%; gap: 15px;">
+        <div id="left-panel">
+            <div id="emoji-display">✨</div>
+            <button onclick="speakQuestion()" style="padding: 12px 30px; border-radius: 30px; cursor: pointer; background: var(--primary); color: white; border: none;">🔊 Question</button>
+        </div>
+        <div id="right-panel">
+            <div id="q-area"></div>
+            <div id="a-area" style="margin-top:20px; padding:20px; background:#fffde7; border-left:8px solid var(--gold); border-radius:12px; cursor:pointer;" class="hidden" onclick="speakReply()"></div>
+            <div id="options-area" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <div id="list-mode-container">
+        <button class="list-close" onclick="closeList()">CLOSE [X]</button>
+        <div id="list-content"></div>
+    </div>
+</main>
+
+<script>
+    const database = [
+        ["您贵姓？", "nín guì xìng ?", "What is your surname? (Polite)", "👤", {cn: "我姓张，您好。", py: "wǒ xìng zhāng , nín hǎo", en: "My surname is Zhang, hello."}],
+        ["它在做什么？", "tā zài zuò shén me ?", "What is it doing?", "🐱", {cn: "它在喝牛奶。", py: "tā zài hē niú nǎi", en: "It is drinking milk."}],
+        ["大家准备好了吗？", "dà jiā zhǔn bèi hǎo le ma ?", "Is everyone ready?", "👥", {cn: "我们都准备好了。", py: "wǒ men dōu zhǔn bèi hǎo le", en: "We are all ready."}],
+        ["你每年来中国吗？", "nǐ měi nián lái zhōng guó ma ?", "Do you come to China every year?", "✈️", {cn: "我每年都来一次。", py: "wǒ měi nián dōu lái yí cì", en: "I come once every year."}],
+        ["为什么不吃羊肉？", "wèi shén me bù chī yáng ròu ?", "Why not eat mutton?", "❓", {cn: "因为我不喜欢。", py: "yīn wèi wǒ bù xǐ huan", en: "Because I don't like it."}],
+        ["今天零度吗？", "líng dù ma ?", "Is it zero degrees today?", "❄️", {cn: "是的，真冷。", py: "shì de , zhēn lěng", en: "Yes, it's really cold."}],
+        ["这两件衣服漂亮吗？", "zhè liǎng jiàn yī fu piào liang ma ?", "Are these two pieces of clothing pretty?", "👗", {cn: "这两件都非常漂亮。", py: "zhè liǎng jiàn dōu fēi cháng piào liang", en: "Both of these two are very pretty."}],
+        ["你有一百块钱吗？", "yì bǎi kuài qián ?", "Do you have 100 RMB?", "💰", {cn: "我只有五十块。", py: "wǒ zhǐ yǒu wǔ shí kuài", en: "I only have 50."}],
+        ["那一千个汉字难吗？", "yì qiān gè hàn zì nán ma ?", "Are those 1000 characters hard?", "✍️", {cn: "非常难，但我喜欢。", py: "fēi cháng nán , dàn wǒ xǐ huan", en: "Very hard, but I like them."}],
+        ["这是你第一次来吗？", "dì yī cì lái ma ?", "Is this your first time coming?", "🆕", {cn: "是我第一次旅游。", py: "shì wǒ dì yī cì lǚ yóu", en: "It's my first time traveling."}],
+        ["别在房间外唱歌。", "bié zài fáng jiān wài chàng gē .", "Don't sing outside the room.", "🚫", {cn: "好的，我不唱了。", py: "hǎo de , wǒ bù chàng le", en: "Okay, I won't sing anymore."}],
+        ["你也觉得累吗？", "nǐ yě jué de lèi ma ?", "Do you also feel tired?", "😫", {cn: "我也非常累。", py: "wǒ yě fēi cháng lèi", en: "I am also very tired."}],
+        ["你还在工作吗？", "nǐ hái zài gōng zuò ma ?", "Are you still working?", "💼", {cn: "我已经休息了。", py: "wǒ yǐ jīng xiū xi le", en: "I have already rested."}],
+        ["谁跑得最快？", "shéi pǎo de zuì kuài ?", "Who runs the fastest?", "🏃", {cn: "我哥哥最快。", py: "wǒ gē ge zuì kuài", en: "My brother is the fastest."}],
+        ["今天天气真晴。", "jīn tiān tiān qì zhēn qíng .", "The weather is really sunny today.", "☀️", {cn: "对，我们去运动吧。", py: "duì , wǒ men qù yùn dòng ba", en: "Right, let's go exercise."}],
+        ["他在看报纸吗？", "tā zài kàn bào zhǐ ma ?", "Is he reading the newspaper?", "📰", {cn: "他在看这道题。", py: "tā zài kàn zhè dào tí", en: "He is looking at this question."}],
+        ["我们一起去机场吧？", "wǒ men yì qǐ qù jī chǎng ba ?", "Shall we go to the airport together?", "✈️", {cn: "好，现在就走。", py: "hǎo , xiàn zài jiù zǒu", en: "Okay, let's go right now."}],
+        ["欢迎再来北京。", "huān yíng zài lái běi jīng .", "Welcome to Beijing again.", "👋", {cn: "谢谢，再见。", py: "xiè xie , zài jiàn", en: "Thanks, goodbye."}],
+        ["虽然下雪，但是不冷？", "suī rán xià xuě , dàn shì bù lěng ?", "Although snowing, but not cold?", "❄️", {cn: "不，非常冷。", py: "bù , fēi cháng lěng", en: "No, very cold."}],
+        ["离这里近不近？", "lí zhè lǐ jìn bú jìn ?", "Is it close to here?", "📍", {cn: "离这里非常远。", py: "lí zhè lǐ fēi cháng yuǎn", en: "It's very far from here."}],
+        ["现在几点几分？", "xiàn zài jǐ diǎn jǐ fēn ?", "What time is it now?", "🕒", {cn: "下午三点十分。", py: "xià wǔ sān diǎn shí fēn", en: "It is 3:10 PM."}],
+        ["你认识那个男人吗？", "nǐ rèn shi nà ge nán rén ma ?", "Do you know that man?", "👨", {cn: "他是我丈夫。", py: "tā shì wǒ zhàng fu", en: "He is my husband."}],
+        ["你妻子在哪儿？", "nǐ qī zi zài nǎ r ?", "Where is your wife?", "👩", {cn: "她在商店买东西。", py: "tā zài shāng diàn mǎi dōng xi", en: "She is buying things at the store."}],
+        ["你姐姐漂亮吗？", "nǐ jiě jie piào liang ma ?", "Is your elder sister pretty?", "👭", {cn: "她非常漂亮。", py: "tā fēi cháng piào liang", en: "She is very pretty."}],
+        ["你弟弟在做什么？", "nǐ dì di zài zuò shén me ?", "What is your younger brother doing?", "👦", {cn: "他在打篮球。", py: "tā zài dǎ lán qiú", en: "He is playing basketball."}],
+        ["你的服务员是谁？", "nǐ de fú wù yuán shì shéi ?", "Who is your waiter?", "🤵", {cn: "是那位女服务员。", py: "shì nà wèi nǚ fú wù yuán", en: "It's that waitress."}],
+        ["这道题错了吗？", "zhè dào tí cuò le ma ?", "Is this question wrong?", "❌", {cn: "不对，你写错了。", py: "bú duì , nǐ xiě cuò le", en: "Incorrect, you wrote it wrong."}],
+        ["你跳舞跳得好吗？", "nǐ tiào wǔ tiào de hǎo ma ?", "Do you dance well?", "💃", {cn: "我跳得不怎么样。", py: "wǒ tiào de bù zěn me yàng", en: "I don't dance very well."}],
+        ["生病了要去医院吗？", "shēng bìng le yào qù yī yuàn ma ?", "Do I need to go to hospital when sick?", "🏥", {cn: "对，要看医生。", py: "duì , yào kàn yī shēng", en: "Yes, you need to see a doctor."}],
+        ["你在等公共汽车吗？", "nǐ zài děng gōng gòng qì chē ma ?", "Are you waiting for the bus?", "🚌", {cn: "我在等火车站的车。", py: "wǒ zài děng huǒ chē zhàn de chē", en: "I'm waiting for the train station shuttle."}],
+        ["这个西瓜贵吗？", "zhè ge xī guā guì ma ?", "Is this watermelon expensive?", "🍉", {cn: "很便宜，才十块钱。", py: "hěn pián yi , cái shí kuài qián", en: "Very cheap, only 10 RMB."}],
+        ["你喜欢喝咖啡吗？", "nǐ xǐ huan hē kā fēi ma ?", "Do you like drinking coffee?", "☕", {cn: "我更喜欢喝茶。", py: "wǒ gèng xǐ huan hē chá", en: "I prefer drinking tea."}],
+        ["那件衣服是什么颜色？", "nà jiàn yī fu shì shén me yán sè ?", "What color is that clothing?", "🎨", {cn: "是黑色的。", py: "shì hēi sè de", en: "It is black."}],
+        ["你早上几点起床？", "nǐ zǎo shang jǐ diǎn qǐ chuáng ?", "What time do you get up in the morning?", "🌅", {cn: "我六点半起床。", py: "wǒ liù diǎn bàn qǐ chuáng", en: "I get up at 6:30."}],
+        ["你会踢足球吗？", "nǐ huì tī zú qiú ma ?", "Can you play soccer?", "⚽", {cn: "我会，我们一起去吧。", py: "wǒ huì , wǒ men yì qǐ qù ba", en: "I can, let's go together."}],
+        ["你正在跑步吗？", "nǐ zhèng zài pǎo bù ma ?", "Are you running right now?", "🏃‍♂️", {cn: "是的，我每天运动。", py: "shì de , wǒ měi tiān yùn dòng", en: "Yes, I exercise every day."}],
+        ["你觉得这双眼睛漂亮吗？", "nǐ jué de zhè shuāng yǎn jing piào liang ma ?", "Do you think these eyes are pretty?", "👀", {cn: "非常有意思。", py: "fēi cháng yǒu yì si", en: "Very interesting."}],
+        ["这个宾馆怎么走？", "zhè ge bīn guǎn zěn me zǒu ?", "How do I get to this hotel?", "🏨", {cn: "往前走，往左拐。", py: "wǎng qián zǒu , wǎng zuǒ guǎi", en: "Go forward, turn left."}],
+        ["你卖什么东西？", "nǐ mài shén me dōng xi ?", "What things do you sell?", "🛍️", {cn: "我卖水果和鸡蛋。", py: "wǒ mài shuǐ guǒ hé jī dàn", en: "I sell fruits and eggs."}],
+        ["外面下雨了吗？", "wài miàn xià yǔ le ma ?", "Is it raining outside?", "🌧️", {cn: "没下雨，是阴天。", py: "méi xià yǔ , shì yīn tiān", en: "Not raining, it's cloudy."}],
+        ["你要去商店买什么？", "nǐ yào qù shāng diàn mǎi shén me ?", "What are you going to the store to buy?", "🛒", {cn: "我想买几件新衣服。", py: "wǒ xiǎng mǎi jǐ jiàn xīn yī fu", en: "I want to buy some new clothes."}],
+        ["他什么时候上班？", "tā shén me shí hou shàng bān ?", "When does he go to work?", "💼", {cn: "他早上八点上班。", py: "tā zǎo shang bā diǎn shàng bān", en: "He goes to work at 8 AM."}],
+        ["你喜欢在那儿玩吗？", "nǐ xǐ huan zài nà r wán ma ?", "Do you like playing there?", "🎡", {cn: "我不喜欢，那儿太吵了。", py: "wǒ bù xǐ huan , nà r tài chǎo le", en: "I don't like it, it's too noisy there."}],
+        ["这个考试难不难？", "zhè ge kǎo shì nán bù nán ?", "Is this exam difficult?", "📝", {cn: "有点儿难，我没做完。", py: "yǒu diǎn r nán , wǒ méi zuò wán", en: "A bit hard, I didn't finish."}],
+        ["那家饭馆在哪儿？", "nà jiā fàn guǎn zài nǎ r ?", "Where is that restaurant?", "🍜", {cn: "在电影院旁边。", py: "zài diàn yǐng yuàn páng biān", en: "Beside the cinema."}],
+        ["你要给谁打电话？", "nǐ yào gěi shéi dǎ diàn huà ?", "Who are you going to call?", "📞", {cn: "给我妈妈打电话。", py: "gěi wǒ mā ma dǎ diàn huà", en: "I'm calling my mother."}],
+        ["你知道他的名字吗？", "nǐ zhī dào tā de míng zi ma ?", "Do you know his name?", "❓", {cn: "我不知道。", py: "wǒ bù zhī dào", en: "I don't know."}],
+        ["你会骑自行车吗？", "nǐ huì qí zì xíng chē ma ?", "Can you ride a bicycle?", "🚲", {cn: "我会骑，但不常骑。", py: "wǒ huì qí , dàn bù cháng qí", en: "I can, but I don't ride often."}],
+        ["这本书你看完了吗？", "zhè běn shū nǐ kàn wán le ma ?", "Have you finished reading this book?", "📖", {cn: "已经看完了，真好。 ", py: "yǐ jīng kàn wán le , zhēn hǎo", en: "Already finished, it's really good."}],
+        ["你要喝果汁还是牛奶？", "nǐ yào hē guǒ zhī hái shì niú nǎi ?", "Do you want juice or milk?", "🍹", {cn: "我要牛奶，谢谢。", py: "wǒ yào niú nǎi , xiè xie", en: "I want milk, thanks."}],
+        ["你的猫在哪儿？", "nǐ de māo zài nǎ r ?", "Where is your cat?", "🐱", {cn: "它在椅子下面。", py: "tā zài yǐ zi xià mian", en: "It is under the chair."}],
+        ["你在学校学习什么？", "nǐ zài xué xiào xué xí shén me ?", "What do you study at school?", "🏫", {cn: "我学习汉语。", py: "wǒ xué xí hàn yǔ", en: "I study Chinese."}],
+        ["你要买几张票？", "nǐ yào mǎi jǐ zhāng piào ?", "How many tickets do you want to buy?", "🎫", {cn: "我要买两张票。", py: "wǒ yào mǎi liǎng zhāng piào", en: "I want to buy two tickets."}],
+        ["你会写这个汉字吗？", "nǐ huì xiě zhè ge hàn zì ma ?", "Can you write this character?", "✍️", {cn: "我会写，这个很容易。", py: "wǒ huì xiě , zhè ge hěn róng yì", en: "I can write it, this is very easy."}],
+        ["你的汉语老师是谁？", "nǐ de hàn yǔ lǎo shī shì shéi ?", "Who is your Chinese teacher?", "👩‍🏫", {cn: "是王老师。", py: "shì wáng lǎo shī", en: "It's Teacher Wang."}],
+        ["你要吃米饭还是面条？", "nǐ yào chī mǐ fàn hái shì miàn tiáo ?", "Do you want rice or noodles?", "🍚", {cn: "我要米饭。", py: "wǒ yào mǐ fàn", en: "I want rice."}],
+        ["你会开车吗？", "nǐ huì kāi chē ma ?", "Can you drive a car?", "🚗", {cn: "我不会开。", py: "wǒ bú huì kāi", en: "I can't drive."}],
+        ["你的生日是几月几号？", "nǐ de shēng rì shì jǐ yuè jǐ hào ?", "When is your birthday?", "🎂", {cn: "九月八号。", py: "jiǔ yuè bā hào", en: "September 8th."}],
+        ["现在几点？", "xiàn zài jǐ diǎn ?", "What time is it now?", "🕒", {cn: "现在十点整。", py: "xiàn zài shí diǎn zhěng", en: "It is 10 o'clock sharp."}],
+        ["你喜欢吃苹果吗？", "nǐ xǐ huan chī píng guǒ ma ?", "Do you like eating apples?", "🍎", {cn: "我非常喜欢吃。", py: "wǒ fēi cháng xǐ huan chī", en: "I like eating them very much."}],
+        ["你的电脑在哪儿？", "nǐ de diàn nǎo zài nǎ r ?", "Where is your computer?", "💻", {cn: "在桌子上面。", py: "zài zhuō zi shàng mian", en: "It's on the table."}],
+        ["你在哪儿买的衣服？", "nǐ zài nǎ r mǎi de yī fu ?", "Where did you buy the clothes?", "🛍️", {cn: "我在商店买的。", py: "wǒ zài shāng diàn mǎi de", en: "I bought them at the store."}],
+        ["你想喝点儿什么？", "nǐ xiǎng hē diǎn r shén me ?", "What would you like to drink?", "🥛", {cn: "我想喝点儿水。", py: "wǒ xiǎng hē diǎn r shuǐ", en: "I'd like to drink some water."}],
+        ["这儿有人吗？", "zhèr yǒu rén ma ?", "Is there anyone here?", "🪑", {cn: "没有，请坐。", py: "méi yǒu , qǐng zuò", en: "No, please sit."}],
+        ["你什么时候回家？", "nǐ shén me shí hou huí jiā ?", "When are you going home?", "🏠", {cn: "我下午六点回家。", py: "wǒ xià wǔ liù diǎn huí jiā", en: "I'm going home at 6 PM."}],
+        ["你家有几口人？", "nǐ jiā yǒu jǐ kǒu rén ?", "How many people are there in your family?", "👨‍👩‍👧‍👦", {cn: "我家有四口人。", py: "wǒ jiā yǒu sì kǒu rén", en: "There are four people in my family."}],
+        ["你会说英语吗？", "nǐ huì shuō yīng yǔ ma ?", "Can you speak English?", "🗣️", {cn: "我会说一点儿。", py: "wǒ huì shuō yì diǎn r", en: "I can speak a little."}],
+        ["你在这个公司工作了几年？", "nǐ zài zhè ge gōng sī gōng zuò le jǐ nián ?", "How many years have you worked in this company?", "🏢", {cn: "我工作了三年。", py: "wǒ gōng zuò le sān nián", en: "I've worked for three years."}],
+        ["你认识王先生吗？", "nǐ rèn shi wáng xiān sheng ma ?", "Do you know Mr. Wang?", "🧔", {cn: "我不认识他。", py: "wǒ bú rèn shi tā", en: "I don't know him."}],
+        ["那家书店大吗？", "nà jiā shū diàn dà ma ?", "Is that bookstore big?", "📚", {cn: "非常大，书很多。", py: "fēi cháng dà , shū hěn duō", en: "Very big, there are many books."}],
+        ["你想看电影吗？", "nǐ xiǎng kàn diàn yǐng ma ?", "Do you want to watch a movie?", "🎬", {cn: "我想看，什么时候去？", py: "wǒ xiǎng kàn , shén me shí hou qù", en: "I want to, when shall we go?"}],
+        ["今天星期几？", "jīn tiān xīng qī jǐ ?", "What day is today?", "📅", {cn: "今天星期五。", py: "jīn tiān xīng qī wǔ", en: "Today is Friday."}],
+        ["你会写多少个汉字？", "nǐ huì xiě duō shǎo gè hàn zì ?", "How many characters can you write?", "✍️", {cn: "我会写三百个。", py: "wǒ huì xiě sān bǎi gè", en: "I can write 300."}],
+        ["你朋友叫什么名字？", "nǐ péng you jiào shén me míng zi ?", "What is your friend's name?", "🤝", {cn: "他叫李明。", py: "tā jiào lǐ míng", en: "He is called Li Ming."}],
+        ["天气怎么样？", "tiān qì zěn me yàng ?", "How is the weather?", "🌡️", {cn: "太热了。", py: "tài rè le", en: "It is too hot."}],
+        ["医生在哪儿？", "yī shēng zài nǎ r ?", "Where is the doctor?", "🩺", {cn: "他在办公室。", py: "tā zài bàn gōng shì", en: "He is in the office."}],
+        ["你想去哪儿旅游？", "nǐ xiǎng qù nǎ r lǚ yóu ?", "Where do you want to travel?", "✈️", {cn: "我想去北京。", py: "wǒ xiǎng qù běi jīng", en: "I want to go to Beijing."}],
+        ["你会做饭吗？", "nǐ huì zuò fàn ma ?", "Can you cook?", "🍳", {cn: "我会做，很好吃。", py: "wǒ huì zuò , hěn hǎo chī", en: "I can, it's delicious."}],
+        ["你几点去学校？", "nǐ jǐ diǎn qù xué xiào ?", "What time do you go to school?", "🎒", {cn: "我八点去学校。", py: "wǒ bā diǎn qù xué xiào", en: "I go to school at 8."}],
+        ["你喜欢看电视吗？", "nǐ xǐ huan kàn diàn shì ma ?", "Do you like watching TV?", "📺", {cn: "我不喜欢，没意思。", py: "wǒ bù xǐ huan , méi yǒu yì si", en: "I don't like it, it's boring."}],
+        ["这个字怎么读？", "zhè ge zì zěn me dú ?", "How do you read this character?", "📖", {cn: "我不知道。", py: "wǒ bù zhī dào", en: "I don't know."}],
+        ["你想买什么？", "nǐ xiǎng mǎi shén me ?", "What do you want to buy?", "🛍️", {cn: "我想买一杯茶。", py: "wǒ xiǎng mǎi yì bēi chá", en: "I want to buy a cup of tea."}],
+        ["这儿有椅子吗？", "zhèr yǒu yǐ zi ma ?", "Is there a chair here?", "🪑", {cn: "在那儿。", py: "zài nà r", en: "It is over there."}],
+        ["你会游到那边吗？", "nǐ huì yóu dào nà biān ma ?", "Can you swim over there?", "🏊", {cn: "我不行，太远了。", py: "wǒ bù xíng , tài yuǎn le", en: "I can't, it's too far."}],
+        ["你喜欢什么颜色？", "nǐ xǐ huan shén me yán sè ?", "What color do you like?", "🎨", {cn: "我喜欢红色。", py: "wǒ xǐ huan hóng sè", en: "I like red."}],
+        ["这个多少钱？", "zhè ge duō shǎo qián ?", "How much is this?", "🏷️", {cn: "十五块钱。", py: "shí wǔ kuài qián", en: "15 RMB."}],
+        ["你在这儿住了几天？", "nǐ zài zhèr zhù le jǐ tiān ?", "How many days have you stayed here?", "🛌", {cn: "住了三天。", py: "zhù le sān tiān", en: "Stayed for 3 days."}],
+        ["你会唱歌吗？", "nǐ huì chàng gē ma ?", "Can you sing?", "🎤", {cn: "我会，我喜欢唱歌。", py: "wǒ huì , wǒ xǐ huan chàng gē", en: "I can, I like singing."}],
+        ["你想喝水吗？", "nǐ xiǎng hē shuǐ ma ?", "Do you want to drink water?", "💧", {cn: "不喝，我不渴。", py: "bù hē , wǒ bù kě", en: "No, I'm not thirsty."}],
+        ["你喜欢这件衣服吗？", "nǐ xǐ huan zhè jiàn yī fu ma ?", "Do you like this clothing?", "👚", {cn: "非常喜欢。", py: "fēi cháng xǐ huan", en: "I like it very much."}],
+        ["你认识路吗？", "nǐ rèn shi lù ma ?", "Do you know the way?", "🛣️", {cn: "认识，跟我走。", py: "rèn shi , gēn wǒ zǒu", en: "I do, follow me."}],
+        ["你要去火车站吗？", "nǐ yào qù huǒ chē zhàn ma ?", "Are you going to the train station?", "🚉", {cn: "对，我现在去。", py: "duì , wǒ xiàn zài qù", en: "Yes, I'm going now."}],
+        ["这儿有商店吗？", "zhèr yǒu shāng diàn ma ?", "Is there a store here?", "🏪", {cn: "前边有一个。", py: "qián bian yǒu yí gè", en: "There is one ahead."}],
+        ["你会写汉字吗？", "nǐ huì xiě hàn zì ma ?", "Can you write Chinese characters?", "🖋️", {cn: "我会写一点儿。", py: "wǒ huì xiě yì diǎn r", en: "I can write a little."}],
+        ["你几岁了？", "nǐ jǐ suì le ?", "How old are you?", "🎂", {cn: "我二十岁。", py: "wǒ èr shí suì", en: "I am 20."}],
+        ["你昨天去哪儿了？", "nǐ zuó tiān qù nǎ r le ?", "Where did you go yesterday?", "📅", {cn: "我去书店了。", py: "wǒ qù shū diàn le", en: "I went to the bookstore."}],
+        ["你想吃米饭吗？", "nǐ xiǎng chī mǐ fàn ma ?", "Do you want to eat rice?", "🍚", {cn: "不想吃，我想吃面。", py: "bù xiǎng chī , wǒ xiǎng chī miàn", en: "No, I want noodles."}],
+        ["你会打篮球吗？", "nǐ huì dǎ lán qiú ma ?", "Can you play basketball?", "🏀", {cn: "不会，但我喜欢看。", py: "bú huì , dàn wǒ xǐ huan kàn", en: "I can't, but I like watching."}],
+        ["这个多少钱？", "zhè ge duō shǎo qián ?", "How much is this?", "💰", {cn: "三块钱。", py: "sān kuài qián", en: "3 RMB."}],
+        ["你要喝茶吗？", "nǐ yào hē chá ma ?", "Do you want tea?", "🍵", {cn: "谢谢，我不喝。", py: "xiè xie , wǒ bù hē", en: "Thanks, I don't drink."}],
+        ["你会做饭吗？", "nǐ huì zuò fàn ma ?", "Can you cook?", "🍳", {cn: "我会，很好吃。", py: "wǒ huì zuò , hěn hǎo chī", en: "I can, it's tasty."}],
+        ["现在几点？", "xiàn zài jǐ diǎn ?", "What time is it now?", "🕒", {cn: "十一点十分。", py: "shí yī diǎn shí fēn", en: "11:10."}],
+        ["你喜欢看书吗？", "nǐ xǐ huan kàn shū ma ?", "Do you like reading?", "📖", {cn: "非常喜欢。", py: "fēi cháng xǐ huan", en: "I like it very much."}],
+        ["他叫什么名字？", "tā jiào shén me míng zi ?", "What is his name?", "🆔", {cn: "他叫李华。", py: "tā jiào lǐ huá", en: "His name is Li Hua."}],
+        ["今天冷吗？", "jīn tiān lěng ma ?", "Is it cold today?", "❄️", {cn: "不冷，很暖和。", py: "bù lěng , hěn nuǎn huo", en: "Not cold, it's warm."}],
+        ["你要去哪儿？", "nǐ yào qù nǎ r ?", "Where are you going?", "🚶", {cn: "我去学校。", py: "wǒ qù xué xiào", en: "I am going to school."}],
+        ["你会说汉语吗？", "nǐ huì shuō hàn yǔ ma ?", "Can you speak Chinese?", "🗣️", {cn: "我会说一点儿。", py: "wǒ huì shuō yì diǎn r", en: "I can speak a little."}],
+        ["那个大吗？", "nà ge dà ma ?", "Is that big?", "📦", {cn: "非常大。", py: "fēi cháng dà", en: "Very big."}],
+        ["你有几个苹果？", "nǐ yǒu jǐ gè píng guǒ ?", "How many apples do you have?", "🍎", {cn: "我有三个。", py: "wǒ yǒu sān gè", en: "I have three."}],
+        ["现在几月？", "xiàn zài jǐ yuè ?", "What month is it now?", "📅", {cn: "现在十二月。", py: "xiàn zài shí èr yuè", en: "It's December."}],
+        ["你想喝咖啡吗？", "nǐ xiǎng hē kā fēi ma ?", "Do you want to drink coffee?", "☕", {cn: "想喝，谢谢。", py: "xiǎng hē , xiè xie", en: "Yes, thanks."}],
+        ["那是什么？", "nà shì shén me ?", "What is that?", "❓", {cn: "那是我的书。", py: "nà shì wǒ de shū", en: "That is my book."}],
+        ["你认识她吗？", "nǐ rèn shi tā ma ?", "Do you know her?", "👩", {cn: "我不认识。", py: "wǒ bú rèn shi", en: "I don't know."}],
+        ["你要买什么？", "nǐ yào mǎi shén me ?", "What do you want to buy?", "🛍️", {cn: "我想买件衣服。", py: "wǒ xiǎng mǎi jiàn yī fu", en: "I want to buy a piece of clothing."}],
+        ["你会开车吗？", "nǐ huì kāi chē ma ?", "Can you drive?", "🚗", {cn: "我会，但我没车。", py: "wǒ huì , dàn wǒ méi chē", en: "I can, but I don't have a car."}],
+        ["那个多少钱？", "nà ge duō shǎo qián ?", "How much is that?", "💰", {cn: "八块钱。", py: "bā kuài qián", en: "8 RMB."}],
+        ["你想去哪儿？", "nǐ xiǎng qù nǎ r ?", "Where do you want to go?", "🗺️", {cn: "我想去商店。", py: "wǒ xiǎng qù shāng diàn", en: "I want to go to the store."}],
+        ["今天星期几？", "jīn tiān xīng qī jǐ ?", "What day is today?", "📅", {cn: "星期六。", py: "xīng qī liù", en: "Saturday."}],
+        ["你会唱歌吗？", "nǐ huì chàng gē ma ?", "Can you sing?", "🎤", {cn: "我会，很好听。", py: "wǒ huì , hěn hǎo tīng", en: "I can, it's very good."}],
+        ["他多大？", "tā duō dà ?", "How old is he?", "🎂", {cn: "他十岁。", py: "tā shí suì", en: "He is 10."}],
+        ["你吃了吗？", "nǐ chī le ma ?", "Have you eaten?", "🍜", {cn: "还没吃。", py: "hái méi chī", en: "Not yet."}],
+        ["你要喝水吗？", "nǐ yào hē shuǐ ma ?", "Do you want to drink water?", "💧", {cn: "好的，谢谢。", py: "hǎo de , xiè xie", en: "Okay, thanks."}],
+        ["你会跳舞吗？", "nǐ huì tiào wǔ ma ?", "Can you dance?", "💃", {cn: "我不会。", py: "wǒ bú huì", en: "I can't."}],
+        ["那个漂亮吗？", "nà ge piào liang ma ?", "Is that pretty?", "✨", {cn: "很漂亮。", py: "hěn piào liang", en: "Very pretty."}],
+        ["你认识这个字吗？", "nǐ rèn shi zhè ge zì ma ?", "Do you know this character?", "📖", {cn: "认识，这读王。", py: "rèn shi , zhè dú wáng", en: "Yes, this reads Wang."}],
+        ["你要去北京吗？", "nǐ yào qù běi jīng ma ?", "Are you going to Beijing?", "✈️", {cn: "对，明天去。", py: "duì , míng tiān qù", en: "Yes, going tomorrow."}],
+        ["你会游泳吗？", "nǐ huì yóu yǒng ma ?", "Can you swim?", "🏊", {cn: "我会。", py: "wǒ huì", en: "I can."}],
+        ["那个叫什么？", "nà ge jiào shén me ?", "What is that called?", "❓", {cn: "那个叫苹果。", py: "nà ge jiào píng guǒ", en: "That is called an apple."}],
+        ["现在几月？", "xiàn zài jǐ yuè ?", "What month is it now?", "🗓️", {cn: "五月。", py: "wǔ yuè", en: "May."}],
+        ["你想喝点儿什么？", "nǐ xiǎng hē diǎn r shén me ?", "What do you want to drink?", "🍹", {cn: "我想喝果汁。", py: "wǒ xiǎng hē guǒ zhī", en: "I want to drink juice."}],
+        ["你住在哪儿？", "nǐ zhù zài nǎ r ?", "Where do you live?", "🏠", {cn: "我住在北京。", py: "wǒ zhù zài běi jīng", en: "I live in Beijing."}],
+        ["你会写字吗？", "nǐ huì xiě zì ma ?", "Can you write?", "✍️", {cn: "我会写。", py: "wǒ huì xiě", en: "I can write."}],
+        ["这个好吗？", "zhè ge hǎo ma ?", "Is this good?", "👍", {cn: "很好。", py: "hěn hǎo", en: "Very good."}],
+        ["你有书吗？", "nǐ yǒu shū ma ?", "Do you have books?", "📚", {cn: "我有很多书。", py: "wǒ yǒu hěn duō shū", en: "I have many books."}],
+        ["你想去旅游吗？", "nǐ xiǎng qù lǚ yóu ma ?", "Do you want to travel?", "🎒", {cn: "我想去。", py: "wǒ xiǎng qù", en: "I want to."}],
+        ["你会说英语吗？", "nǐ huì shuō yīng yǔ ma ?", "Can you speak English?", "🗨️", {cn: "我会。", py: "wǒ huì", en: "I can."}],
+        ["那个大不想？", "nà ge dà bú dà ?", "Is that big?", "📦", {cn: "不太大。", py: "bú tài dà", en: "Not too big."}],
+        ["你有几个朋友？", "nǐ yǒu jǐ gè péng you ?", "How many friends do you have?", "🤝", {cn: "我有五个朋友。", py: "wǒ yǒu wǔ gè péng you", en: "I have 5 friends."}],
+        ["现在几点？", "xiàn zài jǐ diǎn ?", "What time is it?", "🕙", {cn: "十点半。", py: "shí diǎn bàn", en: "10:30."}],
+        ["你喜欢在那儿吗？", "nǐ xǐ huan zài nà r ma ?", "Do you like it there?", "📍", {cn: "很喜欢。", py: "hěn xǐ huan", en: "I like it very much."}],
+        ["你会画画吗？", "nǐ huì huà huà ma ?", "Can you draw?", "🎨", {cn: "我不会。", py: "wǒ bú huì", en: "I can't."}],
+        ["那个是什么颜色？", "nà shì shén me yán sè ?", "What color is that?", "🌈", {cn: "是蓝色的。", py: "shì lán sè de", en: "It is blue."}],
+        ["你想吃米饭吗？", "nǐ xiǎng chī mǐ fàn ma ?", "Do you want to eat rice?", "🍚", {cn: "想吃。", py: "xiǎng chī", en: "Yes."}],
+        ["你会跑步吗？", "nǐ huì pǎo bù ma ?", "Can you run?", "🏃", {cn: "我会。", py: "wǒ huì", en: "I can."}],
+        ["这个字读什么？", "zhè ge zì dú shén me ?", "What does this character read?", "📖", {cn: "读大。", py: "dú dà", en: "It reads 'da'."}],
+        ["你有几个孩子？", "nǐ yǒu jǐ gè hái zi ?", "How many children do you have?", "🧒", {cn: "两个。", py: "liǎng gè", en: "Two."}],
+        ["你什么时候去？", "nǐ shén me shí hou qù ?", "When are you going?", "📅", {cn: "下个星期去。", py: "xià gè xīng qī qù", en: "Going next week."}],
+        ["你会做什么？", "nǐ huì zuò shén me ?", "What can you do?", "🛠️", {cn: "我会做菜。", py: "wǒ huì zuò cài", en: "I can cook."}],
+        ["现在天气怎么样？", "xiàn zài tiān qì zěn me yàng ?", "How is the weather now?", "☁️", {cn: "天气很好。", py: "tiān qì hěn hǎo", en: "The weather is good."}],
+        ["你想喝牛奶吗？", "nǐ xiǎng hē niú nǎi ma ?", "Do you want to drink milk?", "🥛", {cn: "不想喝。", py: "bù xiǎng hē", en: "No."}],
+        ["你会说中文吗？", "nǐ huì shuō zhōng wén ma ?", "Can you speak Chinese?", "🇨🇳", {cn: "会一点儿。", py: "huì yì diǎn r", en: "A little bit."}]
+    ];
+
+    let currentMode = 'study';
+    let currentIndex = 0;
+    let score = 0;
+    let timer = null;
+    let rushTime = 30;
+
+    function enterApp() {
+        document.getElementById('cover-page').style.opacity = '0';
+        setTimeout(() => document.getElementById('cover-page').classList.add('hidden'), 800);
+        setMode('study');
+    }
+
+    function speakText(t) {
+        window.speechSynthesis.cancel();
+        const msg = new SpeechSynthesisUtterance(t);
+        msg.lang = 'zh-CN'; msg.rate = 0.8;
+        window.speechSynthesis.speak(msg);
+    }
+
+    function generateRuby(text, pinyin) {
+        const chars = text.split(''); const pys = pinyin.split(' ');
+        let html = ""; let pIdx = 0;
+        chars.forEach(c => {
+            if(/[\u4e00-\u9fa5]/.test(c)) {
+                html += `<ruby>${c}<rt>${pys[pIdx]||''}</rt></ruby>`; pIdx++;
+            } else {
+                html += `<span>${c}</span>`;
+                if(![' ','!','?',',','.','，','。'].includes(c)) pIdx++;
+            }
+        });
+        return html;
+    }
+
+    function setMode(m) {
+        currentMode = m;
+        clearInterval(timer);
+        document.getElementById('timer-val').classList.add('hidden');
+        document.querySelectorAll('.nav-btns button').forEach(b => b.classList.remove('active-mode'));
+        document.getElementById('btn-'+m)?.classList.add('active-mode');
+
+        // 核心修正：切换到非 list 模式时，确保 list 容器隐藏，主界面显示
+        if(m !== 'list') {
+            document.getElementById('list-mode-container').style.display = 'none';
+            document.getElementById('main-content').classList.remove('hidden');
+        }
+
+        if(m === 'study') {
+            document.getElementById('mode-instr').innerText = "Study Mode: Click the gold box for the answer.";
+        } else if(m === 'quiz') {
+            document.getElementById('mode-instr').innerText = "Quiz Mode: Mixed translation & response tests.";
+        } else if(m === 'rush') {
+            document.getElementById('mode-instr').innerText = "Rush Mode: 30 seconds to get high score!";
+            startRush();
+        } else if(m === 'list') {
+            showList();
+            return;
+        }
+        render();
+    }
+
+    function startRush() {
+        score = 0; rushTime = 30;
+        document.getElementById('score-display').innerText = "0";
+        document.getElementById('timer-val').classList.remove('hidden');
+        document.getElementById('timer-val').innerText = "30s";
+        timer = setInterval(() => {
+            rushTime--;
+            document.getElementById('timer-val').innerText = rushTime + "s";
+            if(rushTime <= 0) {
+                clearInterval(timer);
+                alert("Time Up! Your Score: " + score);
+                setMode('study');
+            }
+        }, 1000);
+    }
+
+    function render() {
+        const qArea = document.getElementById('q-area');
+        const aArea = document.getElementById('a-area');
+        const optArea = document.getElementById('options-area');
+        qArea.innerHTML = ""; aArea.innerHTML = ""; optArea.innerHTML = "";
+        aArea.classList.add('hidden');
+
+        let data = database[currentIndex];
+        document.getElementById('emoji-display').innerText = data[3];
+
+        if(currentMode === 'study') {
+            qArea.innerHTML = generateRuby(data[0], data[1]) + `<div class="eng-sub">${data[2]}</div>`;
+            aArea.innerHTML = `<div>${generateRuby(data[4].cn, data[4].py)}</div><div style="font-size:16px; color:#666;">${data[4].en}</div>`;
+            aArea.classList.remove('hidden');
+            optArea.innerHTML = `<button class="option-btn" onclick="nextQuestion()" style="background:var(--primary); color:white; text-align:center;">Next Sentence →</button>`;
+        } else {
+            let type = Math.floor(Math.random() * 3); 
+            let question = "", correct = "", options = [];
+
+            if(type === 0) {
+                question = "How to reply: " + data[0];
+                correct = data[4].cn;
+                options = [correct];
+            } else if(type === 1) {
+                question = "Translate to English: " + data[0];
+                correct = data[2];
+                options = [correct];
+            } else {
+                question = "Chinese for: " + data[2];
+                correct = data[0];
+                options = [correct];
+            }
+
+            while(options.length < 4) {
+                let rand = database[Math.floor(Math.random()*database.length)];
+                let alt = (type===0)?rand[4].cn : (type===1)?rand[2] : rand[0];
+                if(!options.includes(alt)) options.push(alt);
+            }
+            options.sort(() => Math.random() - 0.5);
+
+            qArea.innerHTML = `<h2 style="text-align:center; color:var(--primary);">${question}</h2>`;
+            options.forEach(o => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = o;
+                btn.onclick = () => {
+                    if(o === correct) {
+                        score += 10;
+                        document.getElementById('score-display').innerText = score;
+                        nextQuestion();
+                    } else {
+                        btn.style.borderColor = "red";
+                        btn.style.color = "red";
+                    }
+                };
+                optArea.appendChild(btn);
+            });
+        }
+    }
+
+    function nextQuestion() {
+        currentIndex = (currentIndex + 1) % database.length;
+        render();
+    }
+
+    function showList() {
+        document.getElementById('main-content').classList.add('hidden');
+        document.getElementById('list-mode-container').style.display = 'block';
+        const content = document.getElementById('list-content');
+        content.innerHTML = "<h1>📜 Complete 150 Sentence Bank (With Translation)</h1>";
+        database.forEach((item, i) => {
+            const row = document.createElement('div');
+            row.className = 'list-row';
+            row.innerHTML = `
+                <div style="font-size:40px;">${item[3]}</div>
+                <div>
+                    <div style="font-size:22px;"><b>Q${i+1}:</b> ${generateRuby(item[0], item[1])}</div>
+                    <div style="font-size:16px; color:#555; margin-bottom:10px;"><i>Translation: ${item[2]}</i></div>
+                    <div style="color:var(--primary); margin-top:10px;"><b>A:</b> ${generateRuby(item[4].cn, item[4].py)}</div>
+                    <div style="font-size:16px; color:#888; margin-top:5px;"><i>Reply: ${item[4].en}</i></div>
+                </div>`;
+            content.appendChild(row);
+        });
+    }
+
+    function closeList() { 
+        setMode('study'); // 自动触发 setMode 中的 UI 切换逻辑
+    }
+
+    function speakQuestion() { speakText(database[currentIndex][0]); }
+    function speakReply() { speakText(database[currentIndex][4].cn); }
+
+    window.onload = () => {
+        const container = document.getElementById('star-container');
+        for(let i=0; i<60; i++) {
+            let s = document.createElement('div');
+            s.className = 'star';
+            s.style.setProperty('--angle', Math.random() * 360 + 'deg');
+            s.style.left = Math.random() * 100 + "%";
+            s.style.top = Math.random() * 100 + "%";
+            s.style.animationDuration = (Math.random() * 1 + 0.5) + 's';
+            container.appendChild(s);
+        }
+    }
+</script>
+</body>
+</html>
